@@ -163,6 +163,8 @@ x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
     \text{s.t.}\quad
     & d^{\mathcal A}\le \lambda_r(\tilde a_r-\tilde a_{r+1}),
     && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & d^{\mathcal A}\le \lambda_r \tilde a_{r} ,
+    &&  r=|\mathcal{K}| \\
     & a_k=\sum_{i\in\mathcal{I}}\sum_{j\in\mathcal{J}} w_{ijk},
     && \forall k\in\mathcal{K}, \\
     & u_{ij}=\sum_{k\in\mathcal{K}} w_{ijk},

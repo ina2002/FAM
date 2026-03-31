@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2024.8.5)  30 MAR 2026 17:21
+This is XeTeX, Version 3.141592653-2.6-0.999996 (TeX Live 2024) (preloaded format=xelatex 2024.8.5)  31 MAR 2026 14:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -432,16 +432,24 @@ LaTeX Warning: No \author given.
 
 [1
 
-] [2] [3] [4] [5] [6] [7] (./main.aux)
+] [2] [3] [4] [5]
+
+LaTeX Warning: Reference `fig:FAM' on page 6 undefined on input line 259.
+
+[6] [7] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2022/07/14>
  ***********
+
+
+LaTeX Warning: There were undefined references.
+
  ) 
 Here is how much of TeX's memory you used:
  8619 strings out of 474773
  231170 string characters out of 5757730
- 1950842 words of memory out of 5000000
+ 1949842 words of memory out of 5000000
  30645 multiletter control sequences out of 15000+600000
  567475 words of font info for 103 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
