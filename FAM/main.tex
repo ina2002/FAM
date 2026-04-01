@@ -4,6 +4,10 @@
 \usepackage{graphicx} % Required for inserting images
 \usepackage{ctex}
 \usepackage{amsmath,amssymb,amsfonts}
+%添加remark环境
+\usepackage{amsthm}
+
+\newtheorem{remark}{Remark}
 
 \title{专家信息自适应融合多属性决策方法}
 \date{\today}
@@ -33,10 +37,14 @@
 
     \item 方案相对重要性比值信息 $t_{ijkk'}$，其含义为专家 $i$ 在指标 $j$ 下对方案 $k$ 与方案 $k'$ 相对优劣程度的比值判断，即
     \begin{align*}
-        \frac{w_{ijk}}{w_{ijk'}}=t_{ijkk'}, \qquad k,k'\in\mathcal{K}.
+    w_{ijk}=t_{ijkk'}w_{ijk'}, \qquad k,k'\in\mathcal{K}.
     \end{align*}
 \end{enumerate}
 上述四类信息共同构成 FAM 模型的原始输入，也是后续进行数学表达与优化求解的基础。
+\begin{remark}
+需要说明的是，在实际群体决策中，专家所能提供的信息往往是不完全的：部分专家可能仅能给出自身权重，部分专家只能对部分指标进行排序，或仅能在某些指标下给出方案排序与相对重要性比值判断。对此，本文不要求所有输入信息在专家维、指标维和方案维上均完整给定，而是允许输入信息存在缺失。具体而言，若专家 $i$ 未对指标 $j$ 给出排序，则不生成相应的指标排序约束；若专家 $i$ 未在指标 $j$ 下对方案给出排序，则不生成对应的方案排序约束；若某组方案相对重要性比值信息未被提供，则不生成相应的比值约束。因而，后续模型中的各类约束索引集合仅由已观测到的有效输入构成，从而使模型能够兼容“部分可比、部分缺失、逐步补充”的专家信息输入情形。
+\end{remark}
+ 
 
 在给定专家权重 $e_i$ 的前提下，模型进一步构建两类核心决策变量：专家 $i$ 对指标 $j$ 的局部权重贡献 $u_{ij}$，以及专家 $i$ 在指标 $j$ 下对方案 $k$ 的最小权重单元 $w_{ijk}$。其中，$u_{ij}$ 反映专家 $i$ 对指标 $j$ 的重要性判断在模型中的数学化表达，$w_{ijk}$ 则表示专家 $i$ 在指标 $j$ 下对方案 $k$ 的局部评价结果。进一步地，定义
 \begin{align}
@@ -82,7 +90,7 @@
 
 \subsection{模型构建思路}
 
-在上述问题描述基础上，本文进一步构建 FAM 的数学规划模型。模型的核心思想是：在满足给定专家权重、指标排序信息、方案排序信息以及方案相对重要性比值信息的前提下，优先提高最终方案综合权重之间的区分度；在此基础上，进一步提升各专家内部指标权重的差异程度，以避免指标权重塌缩为近似相等的结果。为此，本文采用两层优化思路：第一层目标关注方案排序结果的辨识性，第二层目标关注指标层权重结构的辨识性。
+在上述问题描述基础上，本文进一步构建 FAM 的数学规划模型。模型的核心思想是：在满足给定专家权重、指标排序信息、方案排序信息以及方案相对重要性比值信息的前提下，首先确定各方案的综合权重及其排序结构；同时，考虑到实际决策中部分方案的综合表现可能非常接近，若仍强行赋予不同名次，可能夸大细微差异，因此模型进一步允许综合权重相同的方案处于同一排名层级。在此基础上，模型优先提高不同方案层级之间的区分度；随后，在不牺牲方案层排序效果的前提下，进一步提升各专家内部指标权重的差异程度，以避免指标权重塌缩为近似相等的结果。为此，本文采用两层优化思路：第一层目标关注方案层级排序结果的辨识性，第二层目标关注指标层权重结构的辨识性。
 
 设方案 $k$ 的综合权重为
 \begin{align}
@@ -103,27 +111,37 @@
 \end{align}
 上述关系表明，专家层、指标层与方案层均由同一组最小权重单元 $w_{ijk}$ 统一生成，从而保证模型结构的一致性。
 
-\subsection{第一层模型：方案排序区分度最大化}
+\subsection{第一层模型：允许同层的方案层级区分度最大化}
 
-为提高最终排序结果的辨识性，设 $\tilde a_r$ 表示按综合权重排序后位于第 $r$ 位方案的权重，$\lambda_r$ 为排序位置 $r$ 对应的差异调节参数，$d^{\mathcal A}$ 表示方案层的最小区分度，则第一层目标写为
+为提高最终排序结果的辨识性，同时允许综合表现非常接近的方案处于同一排名层级，设 $\tilde a_r$ 表示按综合权重排序后位于第 $r$ 位方案的权重，$d^{\mathcal A}$ 表示不同排名层级之间的最小区分度，并进一步引入二元变量
 \begin{align}
-    \max \ d^{\mathcal A}
+    y_r=
+    \begin{cases}
+        1, & \text{若第 } r \text{ 位与第 } r+1 \text{ 位属于不同层级},\\
+        0, & \text{若第 } r \text{ 位与第 } r+1 \text{ 位属于同一层级},
+    \end{cases}
+    \qquad r=1,\dots,|\mathcal K|-1.
 \end{align}
-并满足
+同时，设 $\lambda_r$ 为排序位置 $r$ 对应的差异调节参数，$\phi>0$ 为用于判定不同层级的最小分离阈值。于是，第一层目标仍写为
 \begin{align}
-    d^{\mathcal A}\le \lambda_r\bigl(\tilde a_r-\tilde a_{r+1}\bigr),
-    \qquad \forall r=1,\dots,|\mathcal{K}|-1.
+    \max \ d^{\mathcal A}.
 \end{align}
-该目标表示：在满足所有输入判断信息的前提下，尽可能拉大相邻排序位置之间的综合权重差异，从而提高最终方案排序结果的区分度。
+
+与严格线性排序不同，此时 $d^{\mathcal A}$ 不再刻画所有相邻排序位置之间的最小差距，而是仅刻画不同层级之间的最小差距。也就是说，当相邻两个排序位置被判定为同层时，模型允许其综合权重完全相等；当二者被判定为不同层级时，则要求其权重差异至少达到给定阈值 $\phi$，并进一步参与方案层区分度 $d^{\mathcal A}$ 的刻画。由此，模型既能够保证真正存在显著差异的方案被有效区分，又能够避免对综合表现极为接近的方案进行机械性的强行排序。
 
 模型约束包括以下几个方面。
 
 首先，对于排序型输入信息，分别建立指标层与方案层的顺序一致性约束。考虑到严格不等式在数学规划中不便直接处理，本文引入足够小的正常数 $\varepsilon>0$，将排序一致性约束写为
 \begin{align}
     u_{ij}-u_{ij'} &\ge \varepsilon,
-    && \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C:= \{(j,j')\mid p_{ij}<p_{ij'}\},  \\
+    && \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C, \\
     w_{ijk}-w_{ijk'} &\ge \varepsilon,
-    && \forall i\in\mathcal{I},\ \forall j\in\mathcal{J},\ \forall (k,k')\in\Omega_{ij}^A:= \{(k,k')\mid p_{ijk}<p_{ijk'}\}.
+    && \forall i\in\mathcal{I},\ \forall j\in\mathcal{J},\ \forall (k,k')\in\Omega_{ij}^A.
+\end{align}
+其中，
+\begin{align}
+    \Omega_i^C &:= \{(j,j')\mid \text{专家 } i \text{ 已给出 } j \text{ 与 } j' \text{ 的排序信息，且 } p_{ij}<p_{ij'}\}, \\
+    \Omega_{ij}^A &:= \{(k,k')\mid \text{专家 } i \text{ 已在指标 } j \text{ 下给出 } k \text{ 与 } k' \text{ 的排序信息，且 } p_{ijk}<p_{ijk'}\}, 
 \end{align}
 上述约束分别表示：在专家 $i$ 的判断下，排序更靠前的指标或方案，其对应权重至少应比后者高出一个最小容差 $\varepsilon$。
 
@@ -133,7 +151,9 @@
     \qquad
     \forall (i,j,k,k')\in\Omega^{R},
 \end{align}
-其中 $\Omega^{R}$ 表示存在相对重要性比值输入的索引集合。
+其中 ,
+\begin{align}\Omega^{R}   = \{(i,j,k,k')\mid \text{专家 } i \text{ 已在指标 } j \text{ 下给出方案 } k \text{ 与 } k' \text{ 的相对重要性比值}\}.
+\end{align}
 
 再次，为保证权重变量的可比性与可解释性，引入非负约束：
 \begin{align}
@@ -153,18 +173,16 @@
 
 \subsubsection{第一层模型的线性化表达}
 
-由于目标函数中涉及按综合权重排序后的方案位置权重 $\tilde a_r$，其本质上隐含了方案排序结构，难以直接写为标准数学规划形式。为此，进一步引入排序位置权重变量 $\tilde a_r$ 与 $0$--$1$ 位置分配变量 $x_{kr}$，其中
+由于目标函数中涉及按综合权重排序后的方案位置权重 $\tilde a_r$，其本质上隐含了方案排序结构，难以直接写为标准数学规划形式。为此，进一步引入排序位置权重变量 $\tilde a_r$、$0$--$1$ 位置分配变量 $x_{kr}$，以及相邻位置层级判定变量 $y_r$，其中
 \[
 x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
 \]
-这里，$\tilde a_r$ 表示排序后位于第 $r$ 位方案的综合权重。于是，第一层模型可改写为如下标准形式：
+这里，$\tilde a_r$ 表示排序后位于第 $r$ 位方案的综合权重。变量 $y_r$ 用于判定相邻两个排序位置是否属于同一层级：若 $y_r=0$，则要求 $\tilde a_r=\tilde a_{r+1}$；若 $y_r=1$，则要求二者至少相差 $\phi$，并由该差距参与方案层区分度 $d^{\mathcal A}$ 的刻画。
+
+于是，第一层模型可改写为如下混合整数线性规划形式：
 \begin{align}
     \max \quad & d^{\mathcal A} \\
     \text{s.t.}\quad
-    & d^{\mathcal A}\le \lambda_r(\tilde a_r-\tilde a_{r+1}),
-    && \forall r=1,\dots,|\mathcal{K}|-1, \\
-    & d^{\mathcal A}\le \lambda_r \tilde a_{r} ,
-    &&  r=|\mathcal{K}| \\
     & a_k=\sum_{i\in\mathcal{I}}\sum_{j\in\mathcal{J}} w_{ijk},
     && \forall k\in\mathcal{K}, \\
     & u_{ij}=\sum_{k\in\mathcal{K}} w_{ijk},
@@ -183,6 +201,13 @@ x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
     && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|, \\
     & \tilde a_r \ge \tilde a_{r+1},
     && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & \tilde a_r-\tilde a_{r+1} \ge \phi y_r,
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & \tilde a_r-\tilde a_{r+1} \le M y_r,
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & d^{\mathcal A}\le \lambda_r(\tilde a_r-\tilde a_{r+1}) + M(1-y_r),
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & d^{\mathcal A}\le \lambda_{|\mathcal K|}\tilde a_{|\mathcal K|}, \\
     & u_{ij}-u_{ij'} \ge \varepsilon,
     && \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C, \\
     & w_{ijk}-w_{ijk'} \ge \varepsilon,
@@ -191,29 +216,54 @@ x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
     && \forall (i,j,k,k')\in\Omega^{R}, \\
     & w_{ijk}\ge 0,
     && \forall i\in\mathcal{I},\ j\in\mathcal{J},\ k\in\mathcal{K}, \\
+    & \tilde a_r\ge 0,
+    && \forall r=1,\dots,|\mathcal K|, \\
     & x_{kr}\in\{0,1\},
-    && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|.
+    && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|, \\
+    & y_r\in\{0,1\},
+    && \forall r=1,\dots,|\mathcal{K}|-1.
 \end{align}
-其中，$d^{\mathcal A}$ 表示方案层最小区分度，$M$ 为足够大的正常数。通过最大化 $d^{\mathcal A}$，模型优先提高最终方案排序结果的区分度。
+其中，$d^{\mathcal A}$ 表示不同方案层级之间的最小区分度，$M$ 为足够大的正常数，$\phi$ 为判定两个相邻排序位置是否属于不同层级的最小分离阈值。约束
+\begin{align*}
+    \tilde a_r-\tilde a_{r+1} \ge \phi y_r,\qquad
+    \tilde a_r-\tilde a_{r+1} \le M y_r
+\end{align*}
+共同刻画了层级判定逻辑：当 $y_r=0$ 时，有
+\begin{align*}
+    \tilde a_r-\tilde a_{r+1}=0,
+\end{align*}
+即相邻两个位置属于同一层级并具有相等权重；当 $y_r=1$ 时，有
+\begin{align*}
+    \tilde a_r-\tilde a_{r+1}\ge \phi,
+\end{align*}
+即二者属于不同层级并至少保持 $\phi$ 的最小间隔。
+
+相应地，约束
+\begin{align*}
+    d^{\mathcal A}\le \lambda_r(\tilde a_r-\tilde a_{r+1}) + M(1-y_r)
+\end{align*}
+保证仅当第 $r$ 位与第 $r+1$ 位属于不同层级时，其差值才参与 $d^{\mathcal A}$ 的刻画；若二者属于同一层级，则该约束自动放松，不再要求这一对相邻位置为方案层区分度提供支撑。通过最大化 $d^{\mathcal A}$，模型优先提高不同方案层级之间的区分程度，同时允许综合表现极为接近的方案在最优解中呈现为相同权重。
 
 \subsection{第二层模型：指标层差距最大化}
 
-仅以上述第一层模型进行求解时，虽然能够保证排序一致性，但由于指标层仅受序关系约束，其权重差异可能退化为最小可行差距，从而出现“顺序存在但差距不足”的现象。为增强模型对专家内部指标重要性差异的识别能力，本文进一步引入如下区分度变量：
+仅以上述第一层模型进行求解时，虽然能够保证排序一致性，并允许方案层出现合理的并列层级，但由于指标层仅受序关系约束，其权重差异仍可能退化为最小可行差距，从而出现“顺序存在但差距不足”的现象。为增强模型对专家内部指标重要性差异的识别能力，本文进一步引入如下区分度变量：
 \begin{align}
     d_i^{\mathcal C}\ge 0,
     \qquad \forall i\in\mathcal{I},
 \end{align}
 其中，$d_i^{\mathcal C}$ 表示专家 $i$ 内部指标权重之间的最小区分度。
 
-在此基础上，将指标层排序约束进一步强化为
+在此基础上，为避免第二层优化放松第一层已经确立的严格排序关系，本文在第二层中同时保留指标层的最小容差约束与区分度约束。具体而言，对于任意由专家 $i$ 给出的有效指标排序对 $(j,j')\in\Omega_i^C$，一方面要求
+\begin{align}
+    u_{ij}-u_{ij'} \ge \varepsilon,
+\end{align}
+以保证排序靠前的指标权重始终严格大于排序靠后的指标权重；另一方面进一步要求
 \begin{align}
     u_{ij}-u_{ij'} \ge d_i^{\mathcal C},
-    \qquad
-    \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C.
 \end{align}
-显然，$d_i^{\mathcal C}$ 越大，说明专家 $i$ 对不同指标的重要性区分越明显。
+从而使 $d_i^{\mathcal C}$ 刻画专家 $i$ 内部不同指标之间可被进一步拉开的最小权重差异。由此，$\varepsilon$ 负责维持排序一致性的严格性，而 $d_i^{\mathcal C}$ 则用于度量并提升指标层权重结构的辨识性。显然，$d_i^{\mathcal C}$ 越大，说明专家 $i$ 对不同指标的重要性区分越明显。
 
-为避免第二层优化破坏第一层已经获得的最优方案区分度，本文采用词典序优化思想。设第一层模型的最优值为 $d^{\mathcal{A}\star}$，则第二层模型在附加约束
+为避免第二层优化破坏第一层已经获得的最优方案层级区分效果，本文采用词典序优化思想。设第一层模型的最优值为 $d^{\mathcal{A}\star}$，则第二层模型在附加约束
 \begin{align}
     d^{\mathcal A}=d^{\mathcal{A}\star}
 \end{align}
@@ -221,13 +271,63 @@ x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
 \begin{align}
     \max \ \sum_{i\in\mathcal{I}} d_i^{\mathcal C}.
 \end{align}
-该目标表示：在不牺牲方案排序区分度的前提下，进一步尽可能拉大各专家内部不同指标之间的权重差距。
+该目标表示：在不牺牲方案层级区分度的前提下，进一步尽可能拉大各专家内部不同指标之间的权重差距。
 
-由此，FAM 模型最终形成“先区分方案、再区分指标”的两层优化结构。第一层模型负责保证方案排序结果具有足够的辨识性，第二层模型则负责提升各专家内部指标权重的辨识能力。相较于原先同时内生识别专家权重的形式，该改进模型将专家权重外生化处理，从而使模型重点转向给定专家权重下的指标分解与方案排序问题，逻辑上更紧凑，也更便于与外部专家赋权方法相衔接。
+因此，第二层模型可表述为
+\begin{align}
+    \max \quad & \sum_{i\in\mathcal I} d_i^{\mathcal C} \\
+    \text{s.t.}\quad
+    & d^{\mathcal A}=d^{\mathcal{A}\star}, \\
+    & u_{ij}-u_{ij'} \ge \varepsilon,
+    && \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C, \\
+    & u_{ij}-u_{ij'} \ge d_i^{\mathcal C},
+    && \forall i\in\mathcal{I},\ \forall (j,j')\in\Omega_i^C, \\
+    & a_k=\sum_{i\in\mathcal{I}}\sum_{j\in\mathcal{J}} w_{ijk},
+    && \forall k\in\mathcal{K}, \\
+    & u_{ij}=\sum_{k\in\mathcal{K}} w_{ijk},
+    && \forall i\in\mathcal{I},\ j\in\mathcal{J}, \\
+    & c_j=\sum_{i\in\mathcal{I}} u_{ij},
+    && \forall j\in\mathcal{J}, \\
+    & \sum_{j\in\mathcal{J}}\sum_{k\in\mathcal{K}} w_{ijk}=e_i,
+    && \forall i\in\mathcal{I}, \\
+    & \sum_{r=1}^{|\mathcal{K}|} x_{kr}=1,
+    && \forall k\in\mathcal{K}, \\
+    & \sum_{k\in\mathcal{K}} x_{kr}=1,
+    && \forall r=1,\dots,|\mathcal{K}|, \\
+    & a_k-\tilde a_r \le M(1-x_{kr}),
+    && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|, \\
+    & \tilde a_r-a_k \le M(1-x_{kr}),
+    && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|, \\
+    & \tilde a_r \ge \tilde a_{r+1},
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & \tilde a_r-\tilde a_{r+1} \ge \phi y_r,
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & \tilde a_r-\tilde a_{r+1} \le M y_r,
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & d^{\mathcal A}\le \lambda_r(\tilde a_r-\tilde a_{r+1}) + M(1-y_r),
+    && \forall r=1,\dots,|\mathcal{K}|-1, \\
+    & d^{\mathcal A}\le \lambda_{|\mathcal K|}\tilde a_{|\mathcal K|}, \\
+    & w_{ijk}-w_{ijk'} \ge \varepsilon,
+    && \forall i\in\mathcal{I},\ \forall j\in\mathcal{J},\ \forall (k,k')\in\Omega_{ij}^A, \\
+    & w_{ijk}=t_{ijkk'}\,w_{ijk'},
+    && \forall (i,j,k,k')\in\Omega^{R}, \\
+    & w_{ijk}\ge 0,
+    && \forall i\in\mathcal{I},\ j\in\mathcal{J},\ k\in\mathcal{K}, \\
+    & d_i^{\mathcal C}\ge 0,
+    && \forall i\in\mathcal I, \\
+    & \tilde a_r\ge 0,
+    && \forall r=1,\dots,|\mathcal K|, \\
+    & x_{kr}\in\{0,1\},
+    && \forall k\in\mathcal{K},\ \forall r=1,\dots,|\mathcal{K}|, \\
+    & y_r\in\{0,1\},
+    && \forall r=1,\dots,|\mathcal{K}|-1.
+\end{align}
+
+由此，FAM 模型最终形成“先区分方案层级、再区分指标”的两层优化结构。第一层模型负责保证方案排序结果具有足够的辨识性，同时允许综合表现极为接近的方案处于同一层级；第二层模型则在保持第一层最优方案层级区分结果不变的前提下，进一步提升各专家内部指标权重的辨识能力。相较于原先同时内生识别专家权重的形式，该改进模型将专家权重外生化处理，从而使模型重点转向给定专家权重下的指标分解与方案层级排序问题，逻辑上更紧凑，也更便于与外部专家赋权方法相衔接。
 
 \subsection{求解结果的聚合与输出}
 
-在完成两层优化求解后，模型首先得到最小权重单元 $w_{ijk}^{\star}$、方案位置分配变量 $x_{kr}^{\star}$、排序位置权重变量 $\tilde a_r^{\star}$，以及区分度变量 $d^{\mathcal{A}\star}$ 和 $d_i^{\mathcal{C}\star}$。在此基础上，可进一步沿不同维度进行聚合并形成最终输出结果。
+在完成两层优化求解后，模型首先得到最小权重单元 $w_{ijk}^{\star}$、方案位置分配变量 $x_{kr}^{\star}$、排序位置权重变量 $\tilde a_r^{\star}$、层级判定变量 $y_r^{\star}$，以及区分度变量 $d^{\mathcal{A}\star}$ 和 $d_i^{\mathcal{C}\star}$。在此基础上，可进一步沿不同维度进行聚合并形成最终输出结果。
 
 专家 $i$ 对指标 $j$ 的局部权重贡献为
 \begin{align}
@@ -254,9 +354,14 @@ x_{kr}=\mathbf{1}(\text{方案 } k \text{ 位于第 } r \text{ 位}).
 \end{align}
 其中，$R_k^{\star}$ 越小，表示方案 $k$ 的排序越靠前。
 
-需要说明的是，在当前模型设定下，专家权重 $e_i$ 为外生给定参数，因此其不再作为模型求解输出，而是作为约束条件贯穿于最小权重单元的分配过程中。故模型最终输出主要包括：各专家对指标的局部权重贡献、各指标的全局权重、各方案的综合权重及其排序结果，以及方案层和指标层的最小区分度指标。
+进一步地，根据层级判定变量 $y_r^\star$ 的取值，可识别最终排序中的并列层级结构。若某一相邻位置满足 $y_r^\star=0$，则有
+\begin{align*}
+    \tilde a_r^\star=\tilde a_{r+1}^\star,
+\end{align*}
+表明对应方案属于同一排名层级；若 $y_r^\star=1$，则表明二者属于不同层级。由此，模型不仅能够输出方案的线性排序位置，还能够进一步识别允许并列情形下的层级排序结果。
 
-图\ref{fig:FAM} 展示 FAM 模型的输入输出结构。通过该图可以清晰地看到，FAM 模型实现了从多源专家判断信息到可计算权重结构再到最终决策结果的完整转化过程。
+需要说明的是，在当前模型设定下，专家权重 $e_i$ 为外生给定参数，因此其不再作为模型求解输出，而是作为约束条件贯穿于最小权重单元的分配过程中。故模型最终输出主要包括：各专家对指标的局部权重贡献、各指标的全局权重、各方案的综合权重及其排序结果、方案层级划分结果，以及方案层和指标层的最小区分度指标。
+
 
 \section{与 OPA 模型的关系说明}
 
