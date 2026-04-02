@@ -1,0 +1,5 @@
+{
+  "name": "FAM 多属性决策计算器",
+  "description": "基于专家信息自适应融合多属性决策模型 (FAM) 的权重计算与方案排序工具，支持缺失数据处理及同等重要性判定。",
+  "requestFramePermissions": []
+}
