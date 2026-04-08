@@ -1,0 +1,225 @@
+--- /mnt/data/App.tsx	2026-04-02 14:38:19.552915436 +0000
++++ /mnt/data/FAM-website-modified/src/App.tsx	2026-04-02 14:48:13.467141469 +0000
+@@ -11,10 +11,24 @@
+   LayoutDashboard, Users, Layers, Target, BarChart3
+ } from 'lucide-react';
+ import { motion, AnimatePresence } from 'motion/react';
+-import { Expert, Attribute, Alternative, FAMData, FAMResult, AttributeRanking, AlternativeRanking, RatioInput, HistoryItem } from './types';
++import { Expert, Attribute, Alternative, FAMData, FAMResult, AttributeRanking, AlternativeRanking, RatioInput, HistoryItem, FAMModelConfig } from './types';
+ import { solveFAM } from './solver';
+ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+ 
++
++const DEFAULT_CONFIG: FAMModelConfig = {
++  alpha: 1,
++  beta: 0.3,
++  eta: 0.001,
++  epsilon: 0.0001,
++  phiTie: 0.03,
++  phiSep: 0.05,
++  lambda: 1,
++  bigM: 1000,
++  barM: 1,
++  minLevels: 0,
++};
++
+ export default function App() {
+   const [step, setStep] = useState(1);
+   const [experts, setExperts] = useState<Expert[]>([{ id: 'e1', name: '专家 1' }]);
+@@ -24,6 +38,7 @@
+   const [attributeRankings, setAttributeRankings] = useState<AttributeRanking[]>([]);
+   const [alternativeRankings, setAlternativeRankings] = useState<AlternativeRanking[]>([]);
+   const [ratios, setRatios] = useState<RatioInput[]>([]);
++  const [config, setConfig] = useState<FAMModelConfig>(DEFAULT_CONFIG);
+   
+   const [result, setResult] = useState<FAMResult | null>(null);
+   const [isSolving, setIsSolving] = useState(false);
+@@ -50,7 +65,7 @@
+       id: Math.random().toString(36).substr(2, 9),
+       timestamp: Date.now(),
+       name: `分析报告 ${new Date().toLocaleString()}`,
+-      data: { experts, attributes, alternatives, attributeRankings, alternativeRankings, ratios },
++      data: { experts, attributes, alternatives, attributeRankings, alternativeRankings, ratios, config },
+       result: res
+     };
+     const updated = [newItem, ...history].slice(0, 10);
+@@ -65,6 +80,7 @@
+     setAttributeRankings(item.data.attributeRankings);
+     setAlternativeRankings(item.data.alternativeRankings);
+     setRatios(item.data.ratios);
++    setConfig(item.data.config ? { ...DEFAULT_CONFIG, ...item.data.config } : DEFAULT_CONFIG);
+     setResult(item.result);
+     setStep(3);
+     setShowHistory(false);
+@@ -123,6 +139,12 @@
+ 
+   const removeRatio = (index: number) => setRatios(ratios.filter((_, i) => i !== index));
+ 
++
++  const handleConfigChange = (key: keyof FAMModelConfig, value: string) => {
++    const parsed = value === '' ? 0 : Number(value);
++    setConfig((prev) => ({ ...prev, [key]: Number.isFinite(parsed) ? parsed : 0 }));
++  };
++
+   const handleCalculate = () => {
+     setIsSolving(true);
+     setError(null);
+@@ -134,7 +156,8 @@
+           alternatives,
+           attributeRankings,
+           alternativeRankings,
+-          ratios
++          ratios,
++          config
+         });
+         if (res) {
+           setResult(res);
+@@ -153,6 +176,7 @@
+   };
+ 
+   const loadSampleData = () => {
++    setConfig(DEFAULT_CONFIG);
+     setExperts([
+       { id: 'e1', name: '专家 A', weight: 0.6 },
+       { id: 'e2', name: '专家 B', weight: 0.4 }
+@@ -341,6 +365,47 @@
+         </section>
+       </div>
+ 
++
++      <div className="bento-card">
++        <div className="flex items-center gap-3 mb-6">
++          <div className="bg-slate-100 text-slate-700 p-2 rounded-2xl">
++            <Settings size={20} />
++          </div>
++          <div>
++            <h2 className="text-lg font-bold">求解参数</h2>
++            <p className="text-sm text-slate-500 mt-1">按照最新模型设置近并列阈值、分层阈值和目标权重。</p>
++          </div>
++        </div>
++        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
++          {[
++            { key: 'alpha', label: 'α', step: '0.1' },
++            { key: 'beta', label: 'β', step: '0.1' },
++            { key: 'eta', label: 'η', step: '0.001' },
++            { key: 'phiTie', label: 'φ tie', step: '0.001' },
++            { key: 'phiSep', label: 'φ sep', step: '0.001' },
++            { key: 'epsilon', label: 'ε', step: '0.0001' },
++            { key: 'lambda', label: 'λ', step: '0.1' },
++            { key: 'bigM', label: 'M', step: '1' },
++            { key: 'barM', label: 'M̄', step: '0.1' },
++            { key: 'minLevels', label: 'L̲', step: '1' },
++          ].map((item) => (
++            <label key={item.key} className="bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 flex flex-col gap-2">
++              <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400">{item.label}</span>
++              <input
++                type="number"
++                step={item.step}
++                value={config[item.key as keyof FAMModelConfig]}
++                onChange={(ev) => handleConfigChange(item.key as keyof FAMModelConfig, ev.target.value)}
++                className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-700 focus:ring-2 focus:ring-slate-400 outline-none"
++              />
++            </label>
++          ))}
++        </div>
++        <p className="text-xs text-slate-400 mt-4 leading-relaxed">
++          当相邻排序位置差异不超过 φ tie 时，模型允许其归入同一层级；当差异至少达到 φ sep 时，模型判定其为不同层级。通常取 φ tie &lt; φ sep。
++        </p>
++      </div>
++
+       <div className="flex justify-center pt-6">
+         <button 
+           onClick={() => setStep(2)}
+@@ -360,7 +425,7 @@
+         </button>
+         <div>
+           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">偏好信息输入</h1>
+-          <p className="text-slate-500 mt-1">输入专家对属性分类和方案设计的判断排序。</p>
++          <p className="text-slate-500 mt-1">输入专家对属性和方案的排序信息，也可补充相对重要性比值。空值将被视为未观测输入。</p>
+         </div>
+       </div>
+ 
+@@ -596,7 +661,8 @@
+               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">计算结果分析</h1>
+               <div className="flex items-center gap-2 mt-1">
+                 <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">模型已收敛</span>
+-                <span className="text-slate-400 text-xs font-mono">Z = {result.Z.toFixed(6)}</span>
++                <span className="text-slate-400 text-xs font-mono">Obj = {result.objectiveValue.toFixed(6)}</span>
++                <span className="text-slate-400 text-xs font-mono">dA = {result.dA.toFixed(6)}</span>
+               </div>
+             </div>
+           </div>
+@@ -673,12 +739,12 @@
+                       <div className="flex-1">
+                         <div className={`text-lg font-bold ${isTop ? 'text-white' : 'text-slate-800'}`}>{alt?.name}</div>
+                         <div className={`text-xs font-medium uppercase tracking-widest mt-1 ${isTop ? 'text-blue-100' : 'text-slate-400'}`}>
+-                          综合得分: {r.weight.toFixed(6)}
++                          综合权重: {r.weight.toFixed(6)} · 层级 {r.level}
+                         </div>
+                       </div>
+                       {r.isTie && (
+                         <div className={`text-[10px] uppercase tracking-wider font-black px-3 py-1 rounded-full ${isTop ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
+-                          并列
++                          同层
+                         </div>
+                       )}
+                       {isTop && (
+@@ -694,6 +760,23 @@
+           </div>
+ 
+           <div className="lg:col-span-4 space-y-8">
++
++            <section className="bento-card">
++              <div className="flex items-center gap-3 mb-6">
++                <div className="bg-violet-100 text-violet-600 p-2 rounded-2xl">
++                  <Settings size={20} />
++                </div>
++                <h2 className="text-lg font-bold">模型摘要</h2>
++              </div>
++              <div className="space-y-4 text-sm">
++                <div className="flex justify-between"><span className="text-slate-500">目标值</span><span className="font-mono font-bold text-slate-700">{result.objectiveValue.toFixed(6)}</span></div>
++                <div className="flex justify-between"><span className="text-slate-500">方案层区分度 dA</span><span className="font-mono font-bold text-slate-700">{result.dA.toFixed(6)}</span></div>
++                <div className="flex justify-between"><span className="text-slate-500">近并列阈值 φ tie</span><span className="font-mono font-bold text-slate-700">{result.config.phiTie}</span></div>
++                <div className="flex justify-between"><span className="text-slate-500">分层阈值 φ sep</span><span className="font-mono font-bold text-slate-700">{result.config.phiSep}</span></div>
++              </div>
++            </section>
++
++
+             <section className="bento-card">
+               <div className="flex items-center gap-3 mb-6">
+                 <div className="bg-blue-100 text-blue-600 p-2 rounded-2xl">
+@@ -1030,7 +1113,7 @@
+                 <section>
+                   <h3 className="font-bold text-slate-900 mb-2">什么是 FAM 模型？</h3>
+                   <p className="text-slate-600 text-sm leading-relaxed">
+-                    FAM (Fusion-based Adaptive MADM) 是一种融合了自适应机制的多属性决策分析模型。它能够处理来自多个专家的不完全偏好信息，通过建立优化模型自动计算专家权重、属性权重以及方案的综合得分。
++                    FAM (Fusion-based Adaptive MADM) 是一种面向多专家、多属性决策的优化模型。当前版本将专家权重作为已知输入，在不完整排序与比值信息基础上，同时求解属性权重、方案综合权重以及允许近并列的层级排序结果。
+                   </p>
+                 </section>
+ 
+@@ -1038,9 +1121,9 @@
+                   <h3 className="font-bold text-slate-900 mb-2">核心优势</h3>
+                   <ul className="space-y-3">
+                     {[
+-                      { title: "自适应权重", desc: "根据专家判断的一致性自动分配权重。" },
+-                      { title: "容错性强", desc: "支持缺失值，不需要专家提供完整的排序。" },
+-                      { title: "多维融合", desc: "支持排序信息与比值信息的混合输入。" }
++                      { title: "固定专家权重", desc: "专家权重 e_i 作为外生输入，并在局部权重单元上保持一致。" },
++                      { title: "近并列同层", desc: "当相邻方案差异不超过 φ tie 时，可归入同一层级；当差异达到 φ sep 时，模型才强制分层。" },
++                      { title: "多维融合", desc: "支持排序信息、比值信息与缺失输入的联合建模。" }
+                     ].map((item, i) => (
+                       <li key={i} className="flex gap-3">
+                         <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+@@ -1056,10 +1139,10 @@
+                 <section className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                   <h3 className="font-bold text-slate-900 mb-2 text-sm">计算逻辑</h3>
+                   <p className="text-xs text-slate-500 leading-relaxed">
+-                    系统将输入的排序信息转化为线性规划约束条件，通过最小化群体不一致性指标 Z 来求解最优权重向量。
++                    系统将输入的排序与比值信息转化为混合整数线性约束，并通过统一目标函数同时提升方案层区分度、专家内部指标区分度以及层级划分清晰性。
+                   </p>
+                   <div className="mt-4 font-mono text-[10px] bg-white p-3 rounded-xl border border-slate-100 text-slate-400">
+-                    min Z = Σ Σ (d_ij + e_ijk)
++                    max α·dA + β·Σ dC_i + η·Σ y_r
+                   </div>
+                 </section>
+               </div>
